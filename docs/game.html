@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Копилка под дождём монет — FinWise</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='32' y='48' font-size='44' text-anchor='middle'%3E%F0%9F%90%B7%3C/text%3E%3C/svg%3E">
+<style>
+:root{--bg:#0f1712;--panel:#18231b;--ink:#eaf3ec;--muted:#9fb3a5;--brand:#22c55e;--brand-ink:#05210e;--bad:#f87171;--gold:#fbbf24;--line:#2a3a2e}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior:none}
+body{display:flex;flex-direction:column;align-items:center}
+header{width:100%;max-width:720px;padding:10px 16px 6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+header a{color:var(--muted);text-decoration:none;font-size:14px;white-space:nowrap}
+header b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header b{font-size:18px}
+#hud{width:100%;max-width:720px;padding:0 16px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 10px;text-align:center;font-size:13px;color:var(--muted)}
+.box b{display:block;font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
+#goalbar{height:6px;background:var(--line);border-radius:6px;margin-top:4px;overflow:hidden}
+#goalbar i{display:block;height:100%;width:0;background:var(--brand)}
+#wrap{position:relative;width:100%;max-width:720px;flex:1;min-height:0;padding:0 16px 16px}
+canvas{display:block;width:100%;height:100%;background:linear-gradient(#173024,#0f1712);border-radius:16px;border:1px solid var(--line);touch-action:none}
+.screen{position:absolute;inset:0 16px 16px;display:flex;align-items:center;justify-content:center;padding:16px;border-radius:16px;background:rgba(10,16,12,.86)}
+.card{max-width:440px;width:100%;text-align:center}
+.card h1{font-size:26px;margin:0 0 8px}
+.card h2{font-size:22px;margin:0 0 6px}
+.card p{margin:0 0 10px;color:var(--muted)}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:left;font-size:14px;margin:10px 0 14px}
+.legend div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.good{color:var(--brand)} .bad{color:var(--bad)}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:12px 22px;min-height:48px;cursor:pointer;background:var(--brand);color:var(--brand-ink)}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.lesson{background:var(--panel);border-left:4px solid var(--gold);border-radius:8px;padding:10px 12px;text-align:left;font-size:14px;margin:10px 0 14px;color:var(--ink)}
+.hide{display:none!important}
+.small{font-size:13px;color:var(--muted)}
+#pauseBtn{position:absolute;top:10px;right:26px;min-height:36px;padding:6px 12px;font-size:14px;background:rgba(24,35,27,.85);color:var(--ink);border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <b>🐷 Копилка под дождём</b>
+  <a href="index.html">← FinWise</a>
+</header>
+<div id="hud">
+  <div class="box">Копилка<b id="hMoney">0 ₸</b><div id="goalbar"><i id="hBar"></i></div></div>
+  <div class="box">Время<b id="hTime">60</b></div>
+  <div class="box">Жизни<b id="hLives">❤️❤️❤️</b></div>
+</div>
+<div id="wrap">
+  <canvas id="c" aria-label="Игровое поле"></canvas>
+  <button id="pauseBtn" class="hide" >❚❚ Пауза</button>
+
+  <div class="screen" id="startScreen">
+    <div class="card">
+      <h1>Накопи 10 000 ₸ за 60 секунд</h1>
+      <p>Двигай копилку и лови деньги. Уворачивайся от ловушек — они забирают деньги и жизнь.</p>
+      <div class="legend">
+        <div class="good">🪙 Монета +500 ₸</div>
+        <div class="good">💵 Купюра +1 000 ₸</div>
+        <div class="good">💼 Подработка +2 000 ₸</div>
+        <div class="good">❤️ Подушка безопасности: +1 жизнь</div>
+        <div class="bad">🏷️ Скидка на ненужное −1 500 ₸</div>
+        <div class="bad">📩 SMS мошенника −2 500 ₸</div>
+        <div class="bad">🔁 Лишняя подписка −1 000 ₸</div>
+        <div class="bad">💳 Кредит на хотелки −2 000 ₸</div>
+      </div>
+      <p class="small">Управление: ← → или A / D на клавиатуре, мышь или палец на телефоне. Пауза — пробел.</p>
+      <div class="row"><button id="startBtn">▶ Играть</button></div>
+      <p class="small" id="bestStart" style="margin-top:10px"></p>
+    </div>
+  </div>
+
+  <div class="screen hide" id="pauseScreen">
+    <div class="card"><h2>Пауза</h2><p>Нажми, чтобы продолжить.</p><div class="row"><button id="resumeBtn">▶ Продолжить</button><button class="ghost" id="quitBtn">Заново</button></div></div>
+  </div>
+
+  <div class="screen hide" id="endScreen">
+    <div class="card">
+      <div style="font-size:52px" id="endEmoji">🎉</div>
+      <h2 id="endTitle"></h2>
+      <p id="endText"></p>
+      <div class="lesson" id="endLesson"></div>
+      <div class="row"><button id="againBtn">↻ Заново</button></div>
+      <p class="small" id="bestEnd" style="margin-top:10px"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var GOAL=10000, TIME=60, LIVES=3, MAX_LIVES=5;
+var GOOD=[
+  {e:'🪙',v:500,w:50,label:''},
+  {e:'💵',v:1000,w:28,label:''},
+  {e:'💼',v:2000,w:8,label:'подработка'},
+  {e:'❤️',v:0,w:4,life:1,label:'подушка'}
+];
+var BAD=[
+  {id:'sale',e:'🏷️',v:-1500,w:10,label:'скидка −70%!',
+   lesson:'«Скидка на ненужное» — это не экономия, а трата. Перед покупкой спроси себя: купил бы я это без скидки?'},
+  {id:'scam',e:'📩',v:-2500,w:8,label:'SMS: введи код',
+   lesson:'Код из SMS, пароль и данные карты никому не сообщай — ни «банку», ни «другу», ни «службе безопасности». Банк такое не просит.'},
+  {id:'sub',e:'🔁',v:-1000,w:10,label:'подписка',
+   lesson:'Подписки списывают деньги каждый месяц, даже если ты ими не пользуешься. Раз в месяц проверяй и отключай лишние.'},
+  {id:'credit',e:'💳',v:-2000,w:7,label:'кредит на хотелки',
+   lesson:'Кредит — это чужие деньги с процентами: вернуть придётся больше, чем взял. На «хочу» лучше накопить.'}
+];
+var c=document.getElementById('c'), ctx=c.getContext('2d');
+var W=0,H=0,DPR=1;
+var st=null, raf=0, last=0, keys={left:false,right:false}, pointerX=null;
+var best=0;
+try{ best=+localStorage.getItem('finwise-piggy-best')||0; }catch(e){}
+
+function $(id){ return document.getElementById(id); }
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU').replace(/,/g,' ')+' ₸'; }
+function show(id){ ['startScreen','pauseScreen','endScreen'].forEach(function(s){ $(s).classList.toggle('hide',s!==id); }); }
+function pick(arr){ var t=0,i; for(i=0;i<arr.length;i++) t+=arr[i].w; var r=Math.random()*t; for(i=0;i<arr.length;i++){ r-=arr[i].w; if(r<=0) return arr[i]; } return arr[0]; }
+
+function resize(){
+  var r=c.getBoundingClientRect(); DPR=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(200,r.width); H=Math.max(200,r.height);
+  c.width=Math.round(W*DPR); c.height=Math.round(H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(st){ st.pig.y=H-46; st.pig.x=Math.min(Math.max(st.pig.x,st.pig.w/2),W-st.pig.w/2); }
+  if(!st||!st.running) draw();
+}
+window.addEventListener('resize',resize);
+
+function newGame(){
+  st={money:0,time:TIME,lives:LIVES,items:[],floats:[],spawn:0,elapsed:0,running:true,paused:false,
+      pig:{x:W/2,y:H-46,w:Math.min(90,W*0.2)},hits:{},caught:0,flash:0};
+  updateHud(); show(null); $('pauseBtn').classList.remove('hide');
+  last=performance.now(); cancelAnimationFrame(raf); raf=requestAnimationFrame(loop);
+}
+function spawn(){
+  var bad=Math.random()< 0.25+Math.min(0.12,st.elapsed/400);
+  var t=bad?pick(BAD):pick(GOOD);
+  if(t.life && st.lives>=MAX_LIVES) t=GOOD[0];
+  var size=t.label?40:34;
+  st.items.push({t:t,bad:bad,x:24+Math.random()*(W-48),y:-30,vy:(110+Math.random()*60)*(1+st.elapsed/60)*Math.max(.8,H/600),size:size,rot:(Math.random()-.5)*.6});
+}
+function loop(now){
+  var dt=Math.min(.05,(now-last)/1000); last=now;
+  if(st.running && !st.paused){ step(dt); }
+  draw();
+  if(st.running) raf=requestAnimationFrame(loop);
+}
+function step(dt){
+  st.elapsed+=dt; st.time-=dt;
+  var p=st.pig, speed=Math.max(380,W*0.9);
+  if(pointerX!=null){ var dx=pointerX-p.x; p.x+=Math.sign(dx)*Math.min(Math.abs(dx),speed*1.6*dt); }
+  else { if(keys.left) p.x-=speed*dt; if(keys.right) p.x+=speed*dt; }
+  p.x=Math.min(Math.max(p.x,p.w/2),W-p.w/2);
+  st.spawn-=dt; var interval=Math.max(.32,.75-st.elapsed*.007);
+  if(st.spawn<=0){ spawn(); st.spawn=interval; }
+  for(var i=st.items.length-1;i>=0;i--){
+    var it=st.items[i]; it.y+=it.vy*dt;
+    var hitY=it.y+it.size*.4>=p.y-22 && it.y-it.size*.4<=p.y+22;
+    var hitX=Math.abs(it.x-p.x)<p.w/2+it.size*.25;
+    if(hitY&&hitX){ catchItem(it); st.items.splice(i,1); continue; }
+    if(it.y-it.size>H) st.items.splice(i,1);
+  }
+  for(var j=st.floats.length-1;j>=0;j--){ var f=st.floats[j]; f.y-=40*dt; f.life-=dt; if(f.life<=0) st.floats.splice(j,1); }
+  if(st.flash>0) st.flash-=dt;
+  if(st.money>=GOAL) return end(true,'goal');
+  if(st.lives<=0) return end(false,'lives');
+  if(st.time<=0){ st.time=0; return end(false,'time'); }
+  updateHud();
+}
+function catchItem(it){
+  var t=it.t;
+  if(it.bad){
+    st.money=Math.max(0,st.money+t.v); st.lives--; st.hits[t.id]=(st.hits[t.id]||0)+1; st.flash=.25;
+    addFloat(it.x,it.y,(t.v)+' ₸','#f87171');
+    if(navigator.vibrate) try{ navigator.vibrate(80); }catch(e){}
+  } else if(t.life){
+    st.lives=Math.min(MAX_LIVES,st.lives+1); addFloat(it.x,it.y,'+1 ❤️','#fbbf24');
+  } else {
+    st.money+=t.v; st.caught++; addFloat(it.x,it.y,'+'+t.v+' ₸','#22c55e');
+  }
+  updateHud();
+}
+function addFloat(x,y,text,color){ st.floats.push({x:x,y:y,text:text,color:color,life:.9}); }
+function updateHud(){
+  $('hMoney').textContent=fmt(st.money);
+  $('hBar').style.width=Math.min(100,st.money/GOAL*100)+'%';
+  $('hTime').textContent=Math.ceil(st.time);
+  $('hLives').textContent=st.lives>0?'❤️'.repeat(st.lives):'—';
+}
+function end(win,reason){
+  st.running=false; updateHud(); $('pauseBtn').classList.add('hide');
+  var score=Math.round(st.money+(win?Math.ceil(st.time)*200:0));
+  var newBest=score>best; if(newBest){ best=score; try{ localStorage.setItem('finwise-piggy-best',best); }catch(e){} }
+  $('endEmoji').textContent=win?'🎉':(reason==='lives'?'💸':'⏰');
+  $('endTitle').textContent=win?'Цель достигнута!':(reason==='lives'?'Ловушки забрали все жизни':'Время вышло');
+  $('endText').textContent=win?('Ты накопил '+fmt(st.money)+' и уложился за '+Math.round(TIME-st.time)+' сек. Очки: '+score+(newBest?' — новый рекорд!':'.'))
+    :('В копилке '+fmt(st.money)+' из '+fmt(GOAL)+'. Очки: '+score+(newBest?' — новый рекорд!':'.')+' Попробуй ещё раз!');
+  var worst=null,n=0; BAD.forEach(function(b){ if((st.hits[b.id]||0)>n){ n=st.hits[b.id]; worst=b; } });
+  $('endLesson').innerHTML='📘 '+(worst?('<b>'+worst.e+' Чаще всего тебя подводило: «'+worst.label+'».</b><br>'+worst.lesson)
+    :'Ни одной ловушки — отлично! Так и в жизни: копить проще, когда не тратишь деньги на ненужное и не попадаешься мошенникам.');
+  $('bestEnd').textContent='Рекорд: '+best+' очков (сохраняется только в этом браузере)';
+  show('endScreen'); draw();
+}
+function setPause(v){ if(!st||!st.running) return; st.paused=v; show(v?'pauseScreen':null); if(!v) last=performance.now(); }
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(st&&st.flash>0){ ctx.fillStyle='rgba(248,113,113,'+(st.flash*1.2)+')'; ctx.fillRect(0,0,W,H); }
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  if(!st){ ctx.font='64px system-ui'; ctx.fillText('🐷',W/2,H-60); return; }
+  st.items.forEach(function(it){
+    ctx.save(); ctx.translate(it.x,it.y); ctx.rotate(it.rot*Math.sin(it.y/40));
+    ctx.font=it.size+'px system-ui'; ctx.fillText(it.t.e,0,0); ctx.restore();
+    if(it.t.label){
+      ctx.font='600 12px system-ui'; var tw=ctx.measureText(it.t.label).width+10;
+      ctx.fillStyle=it.bad?'rgba(127,29,29,.85)':'rgba(20,83,45,.85)';
+      roundRect(it.x-tw/2,it.y+it.size*.55,tw,18,6); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.fillText(it.t.label,it.x,it.y+it.size*.55+9);
+    }
+  });
+  var p=st.pig;
+  ctx.font=Math.round(p.w*.75)+'px system-ui'; ctx.fillText('🐷',p.x,p.y);
+  st.floats.forEach(function(f){ ctx.globalAlpha=Math.max(0,f.life/.9); ctx.font='700 18px system-ui'; ctx.fillStyle=f.color; ctx.fillText(f.text,f.x,f.y); ctx.globalAlpha=1; });
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// Управление
+document.addEventListener('keydown',function(e){
+  var k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a'||k==='ф'){ keys.left=true; pointerX=null; e.preventDefault(); }
+  if(k==='arrowright'||k==='d'||k==='в'){ keys.right=true; pointerX=null; e.preventDefault(); }
+  if(k===' '||k==='p'||k==='з'||k==='escape'){ if(st&&st.running){ setPause(!st.paused); e.preventDefault(); } }
+  if(k==='enter'){ if(!st||!st.running){ newGame(); e.preventDefault(); } }
+});
+document.addEventListener('keyup',function(e){ var k=e.key.toLowerCase();
+  if(k==='arrowleft'||k==='a'||k==='ф') keys.left=false; if(k==='arrowright'||k==='d'||k==='в') keys.right=false; });
+function px(e){ var r=c.getBoundingClientRect(); return e.clientX-r.left; }
+c.addEventListener('pointerdown',function(e){ pointerX=px(e); try{ c.setPointerCapture(e.pointerId); }catch(_){} });
+c.addEventListener('pointermove',function(e){ if(e.pointerType==='mouse'||e.buttons||pointerX!=null) pointerX=px(e); });
+c.addEventListener('pointerup',function(e){ if(e.pointerType!=='mouse') pointerX=null; });
+c.addEventListener('pointerleave',function(e){ if(e.pointerType==='mouse') pointerX=null; });
+document.addEventListener('visibilitychange',function(){ if(document.hidden) setPause(true); });
+
+$('startBtn').onclick=newGame; $('againBtn').onclick=newGame;
+$('resumeBtn').onclick=function(){ setPause(false); };
+$('quitBtn').onclick=newGame;
+$('pauseBtn').onclick=function(){ setPause(true); };
+$('bestStart').textContent=best?('Твой рекорд: '+best+' очков'):'';
+resize();
+})();
+</script>
+</body>
+</html>
